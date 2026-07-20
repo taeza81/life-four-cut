@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인생네컷 - Life 4-Cut</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for various themes -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Fredoka+One&family=Caveat:wght@700&family=Amatic+SC:wght@700&family=Rubik+Glitch&display=swap" rel="stylesheet">
+    <!-- html2canvas for image download -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar for Controls -->
+        <aside class="controls-panel">
+            <h1>Life 4-Cut</h1>
+            <p class="subtitle">나만의 인생네컷 만들기</p>
+
+            <div class="theme-selection">
+                <h3>테마 선택 (Theme)</h3>
+                <div class="theme-buttons">
+                    <button class="theme-btn active" data-theme="classic">
+                        <span class="color-preview classic"></span> 클래식 (Classic)
+                    </button>
+                    <button class="theme-btn" data-theme="pastel">
+                        <span class="color-preview pastel"></span> 파스텔 (Pastel)
+                    </button>
+                    <button class="theme-btn" data-theme="neon">
+                        <span class="color-preview neon"></span> 네온 (Neon)
+                    </button>
+                    <button class="theme-btn" data-theme="nature">
+                        <span class="color-preview nature"></span> 네이처 (Nature)
+                    </button>
+                </div>
+            </div>
+            
+            <div class="zoom-controls-wrapper">
+                <h3>화면 비율 (Zoom)</h3>
+                <div class="zoom-controls">
+                    <button id="zoom-out-btn" class="icon-btn">-</button>
+                    <span id="zoom-level">100%</span>
+                    <button id="zoom-in-btn" class="icon-btn">+</button>
+                    <button id="zoom-fit-btn" class="text-btn-small">Fit</button>
+                </div>
+                <p class="help-text">가운데 화면 빈 곳을 드래그하여 뷰를 이동할 수 있습니다.<br><strong>사진을 더블클릭/드래그/마우스 휠</strong> 하여 구도와 크기를 조절하세요.</p>
+            </div>
+
+            <div class="actions">
+                <button id="download-btn" class="primary-btn">이미지 저장 (PNG)</button>
+                <button id="print-btn" class="secondary-btn">프린트 출력 (A4)</button>
+                <button id="reset-btn" class="text-btn text-danger">모든 사진 초기화</button>
+            </div>
+        </aside>
+
+        <!-- Main Preview Area -->
+        <main class="preview-panel" id="preview-panel">
+            <div id="workspace">
+                <div id="print-area">
+                    <div class="four-cut-frame theme-classic" id="frame">
+                        <!-- Theme decorations -->
+                        <div class="theme-decorations">
+                            <!-- Classic -->
+                            <div class="deco classic-deco top-camera">📷</div>
+                            <div class="deco classic-corner tl"></div>
+                            <div class="deco classic-corner tr"></div>
+                            <div class="deco classic-corner bl"></div>
+                            <div class="deco classic-corner br"></div>
+                            
+                            <!-- Pastel -->
+                            <div class="deco pastel-deco p-cloud1">☁️</div>
+                            <div class="deco pastel-deco p-cloud2">☁️</div>
+                            <div class="deco pastel-deco p-icecream1">🍦</div>
+                            <div class="deco pastel-deco p-icecream2">🍨</div>
+                            <div class="deco pastel-deco p-star1">⭐</div>
+                            <div class="deco pastel-deco p-star2">✨</div>
+                            <div class="deco pastel-deco p-heart">💖</div>
+                            <div class="deco pastel-deco p-donut">🍩</div>
+                            <div class="deco pastel-deco p-ribbon">🎀 FRIENDSHIP 🎀</div>
+                            <div class="deco pastel-deco p-cats">🐱🐱</div>
+                            <div class="deco pastel-deco p-flower">🌷</div>
+
+                            <!-- Neon -->
+                            <div class="deco neon-deco n-fire">🔥</div>
+                            <div class="deco neon-deco n-star1">★</div>
+                            <div class="deco neon-deco n-star2">☆</div>
+                            <div class="deco neon-deco n-crown1">👑</div>
+                            <div class="deco neon-deco n-crown2">👑</div>
+                            <div class="deco neon-deco n-spray1">💨</div>
+                            <div class="deco neon-deco n-spray2">💨</div>
+                            <div class="deco neon-deco n-bolt1">⚡</div>
+                            <div class="deco neon-deco n-bolt2">⚡</div>
+
+                            <!-- Nature -->
+                            <div class="deco nature-deco nat-leaf-top">🌿</div>
+                            <div class="deco nature-deco nat-leaf-right">🍃</div>
+                            <div class="deco nature-deco nat-leaf-bottom">🌱</div>
+                            <div class="deco nature-deco nat-flower1">💐</div>
+                            <div class="deco nature-deco nat-flower2">🌾</div>
+                            <div class="deco nature-deco nat-tape">🏷️</div>
+                        </div>
+
+                        <div class="frame-header">
+                            <h2 class="frame-title">CLASSIC LIFE 4-CUT</h2>
+                            <p class="frame-date"><span id="current-date"></span> | MINA & HARU | MY FOUR CUTS</p>
+                        </div>
+                        <div class="photo-slots">
+                            <!-- Slot 1 -->
+                            <div class="photo-slot">
+                                <input type="file" id="file-1" accept="image/*" class="file-input">
+                                <div class="image-wrapper">
+                                    <div class="photo-image" id="img-1"></div>
+                                </div>
+                                <label for="file-1" class="upload-label" id="label-1">
+                                    <span>+ 사진 추가</span>
+                                </label>
+                            </div>
+                            <!-- Slot 2 -->
+                            <div class="photo-slot">
+                                <input type="file" id="file-2" accept="image/*" class="file-input">
+                                <div class="image-wrapper">
+                                    <div class="photo-image" id="img-2"></div>
+                                </div>
+                                <label for="file-2" class="upload-label" id="label-2">
+                                    <span>+ 사진 추가</span>
+                                </label>
+                            </div>
+                            <!-- Slot 3 -->
+                            <div class="photo-slot">
+                                <input type="file" id="file-3" accept="image/*" class="file-input">
+                                <div class="image-wrapper">
+                                    <div class="photo-image" id="img-3"></div>
+                                </div>
+                                <label for="file-3" class="upload-label" id="label-3">
+                                    <span>+ 사진 추가</span>
+                                </label>
+                            </div>
+                            <!-- Slot 4 -->
+                            <div class="photo-slot">
+                                <input type="file" id="file-4" accept="image/*" class="file-input">
+                                <div class="image-wrapper">
+                                    <div class="photo-image" id="img-4"></div>
+                                </div>
+                                <label for="file-4" class="upload-label" id="label-4">
+                                    <span>+ 사진 추가</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="frame-footer">
+                            <p class="frame-footer-text">MEMORIES</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
