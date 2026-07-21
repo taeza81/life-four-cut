@@ -35,30 +35,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const workspace = document.getElementById('workspace');
     const previewPanel = document.getElementById('preview-panel');
     let currentZoom = 1;
+    let baseZoom = 1; // Used to represent 100% in UI
     let isPanningWorkspace = false;
     let startX = 0, startY = 0;
     let currentPanX = 0, currentPanY = 0;
 
     const updateWorkspaceTransform = () => {
         workspace.style.transform = `translate(${currentPanX}px, ${currentPanY}px) scale(${currentZoom})`;
-        document.getElementById('zoom-level').textContent = `${Math.round(currentZoom * 100)}%`;
+        const displayPercent = Math.round((currentZoom / baseZoom) * 100);
+        document.getElementById('zoom-level').textContent = `${displayPercent}%`;
     };
 
     document.getElementById('zoom-in-btn').addEventListener('click', () => {
-        currentZoom = Math.min(currentZoom + 0.1, 3);
+        // Step by 10% of baseZoom
+        currentZoom = Math.min(currentZoom + (0.1 * baseZoom), 3 * baseZoom);
         updateWorkspaceTransform();
     });
     
     document.getElementById('zoom-out-btn').addEventListener('click', () => {
-        currentZoom = Math.max(currentZoom - 0.1, 0.3);
+        // Step by 10% of baseZoom
+        currentZoom = Math.max(currentZoom - (0.1 * baseZoom), 0.3 * baseZoom);
         updateWorkspaceTransform();
     });
 
     document.getElementById('zoom-fit-btn').addEventListener('click', () => {
-        // Calculate fit scale based on panel size and frame size (approx 400x1200)
         const panelHeight = previewPanel.clientHeight;
-        const frameHeight = frame.clientHeight + 100; // adding some margin
-        currentZoom = Math.min(1, panelHeight / frameHeight);
+        const frameHeight = frame.clientHeight + 100;
+        const fitScale = Math.min(1, panelHeight / frameHeight);
+        
+        currentZoom = fitScale;
+        // Also update baseZoom so 'Fit' is always 100%
+        baseZoom = fitScale;
+        
         currentPanX = 0; currentPanY = 0;
         updateWorkspaceTransform();
     });
@@ -90,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. Image Upload & Editing (Pan/Zoom inside slot) ---
     const fileInputs = document.querySelectorAll('.file-input');
+    const photoSlots = document.querySelectorAll('.photo-slot');
     
     // Store image state
     const imgStates = {};
@@ -102,24 +111,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    fileInputs.forEach(input => {
-        input.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const imageUrl = URL.createObjectURL(file);
-                const idNum = this.id.split('-')[1];
-                const imgElId = `img-${idNum}`;
-                const label = document.getElementById(`label-${idNum}`);
-                const imgEl = document.getElementById(imgElId);
-                
-                imgEl.style.backgroundImage = `url(${imageUrl})`;
-                label.classList.add('has-image');
+    const processFile = (file, idNum) => {
+        if (file && file.type.startsWith('image/')) {
+            const imageUrl = URL.createObjectURL(file);
+            const imgElId = `img-${idNum}`;
+            const label = document.getElementById(`label-${idNum}`);
+            const imgEl = document.getElementById(imgElId);
+            
+            imgEl.style.backgroundImage = `url(${imageUrl})`;
+            label.classList.add('has-image');
 
-                // Initialize state
-                imgStates[imgElId] = { scale: 1, panX: 0, panY: 0, isDragging: false, startX: 0, startY: 0 };
-                updateImageTransform(imgElId);
+            // Initialize state or reset it
+            const isNew = !imgStates[imgElId];
+            imgStates[imgElId] = { scale: 1, panX: 0, panY: 0, isDragging: false, startX: 0, startY: 0 };
+            updateImageTransform(imgElId);
 
-                // Add mouse events to imgEl for pan/zoom
+            // Add mouse events only once
+            if (isNew) {
                 imgEl.addEventListener('mousedown', (e) => {
                     e.preventDefault(); // prevent default drag behavior
                     const state = imgStates[imgElId];
@@ -138,6 +146,66 @@ document.addEventListener('DOMContentLoaded', () => {
                     state.scale = Math.max(0.1, state.scale + zoomDelta);
                     updateImageTransform(imgElId);
                 }, { passive: false });
+
+                // Double click to replace image
+                imgEl.addEventListener('dblclick', () => {
+                    document.getElementById(`file-${idNum}`).click();
+                });
+            }
+        }
+    };
+
+    // File input change
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const idNum = this.id.split('-')[1];
+                processFile(file, idNum);
+                // Reset input value to allow selecting the same file again if needed
+                this.value = '';
+            }
+        });
+    });
+
+    // Prevent default drag behaviors for the whole window
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        window.addEventListener(eventName, e => e.preventDefault());
+    });
+
+    // Drag and drop support
+    photoSlots.forEach((slot, index) => {
+        const idNum = index + 1;
+        
+        slot.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            slot.classList.add('drag-over');
+        });
+
+        slot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            slot.classList.add('drag-over');
+        });
+
+        slot.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Check if leaving the actual slot, not a child element
+            if (!slot.contains(e.relatedTarget)) {
+                slot.classList.remove('drag-over');
+            }
+        });
+
+        slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            slot.classList.remove('drag-over');
+            
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                processFile(file, idNum);
             }
         });
     });
@@ -190,10 +258,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 7. Download Image (html2canvas) ---
     document.getElementById('download-btn').addEventListener('click', async () => {
         const frameElement = document.getElementById('frame');
+        const workspaceElement = document.getElementById('workspace');
         
         // temporarily remove box-shadow for clean export
         const originalShadow = frameElement.style.boxShadow;
         frameElement.style.boxShadow = 'none';
+
+        // temporarily remove workspace transform to fix text spacing issues on zoom out
+        const originalTransform = workspaceElement.style.transform;
+        workspaceElement.style.transform = 'none';
 
         try {
             const canvas = await html2canvas(frameElement, {
@@ -211,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('이미지 저장 중 오류가 발생했습니다.');
         } finally {
             frameElement.style.boxShadow = originalShadow;
+            workspaceElement.style.transform = originalTransform;
         }
     });
 });
