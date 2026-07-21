@@ -632,3 +632,66 @@ button {
     #print-area { margin: 0; padding: 0; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
+
+/* ========================================= */
+/* RESPONSIVE STYLES (Mobile / Tablet) */
+/* ========================================= */
+@media (max-width: 1024px) {
+    body {
+        height: auto;
+        overflow-y: auto;
+        align-items: flex-start;
+        padding: 10px;
+    }
+    
+    .app-container {
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+        max-height: none;
+        overflow: visible;
+        border-radius: 16px;
+    }
+
+    .controls-panel, .help-panel {
+        width: 100%;
+        border-right: none;
+        border-left: none;
+        padding: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .controls-panel {
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .help-panel {
+        border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .preview-panel {
+        min-height: 80vh;
+        width: 100%;
+        border-radius: 0;
+    }
+    
+    .theme-buttons {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .theme-btn {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .controls-panel h1 {
+        font-size: 2rem;
+    }
+    .preview-panel {
+        min-height: 70vh;
+    }
+}

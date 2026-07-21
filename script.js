@@ -60,8 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('zoom-fit-btn').addEventListener('click', () => {
         const panelHeight = previewPanel.clientHeight;
-        const frameHeight = frame.clientHeight + 100;
-        const fitScale = Math.min(1, panelHeight / frameHeight);
+        const panelWidth = previewPanel.clientWidth;
+        const frameHeight = frame.clientHeight + 100; // adding some vertical margin
+        const frameWidth = frame.clientWidth + 40;  // adding some horizontal margin
+        
+        // Fit based on the most constrained dimension
+        const fitScale = Math.min(1, panelHeight / frameHeight, panelWidth / frameWidth);
         
         currentZoom = fitScale;
         // Also update baseZoom so 'Fit' is always 100%
