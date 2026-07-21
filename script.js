@@ -87,6 +87,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    previewPanel.addEventListener('touchstart', (e) => {
+        if(e.touches.length === 1 && (e.target === previewPanel || e.target.id === 'workspace' || e.target.id === 'print-area')) {
+            isPanningWorkspace = true;
+            startX = e.touches[0].clientX - currentPanX;
+            startY = e.touches[0].clientY - currentPanY;
+        }
+    }, { passive: false });
+
     window.addEventListener('mousemove', (e) => {
         if (!isPanningWorkspace) return;
         currentPanX = e.clientX - startX;
@@ -94,9 +102,23 @@ document.addEventListener('DOMContentLoaded', () => {
         updateWorkspaceTransform();
     });
 
+    window.addEventListener('touchmove', (e) => {
+        if (!isPanningWorkspace) return;
+        e.preventDefault(); // Prevent scrolling while panning workspace
+        if(e.touches.length === 1) {
+            currentPanX = e.touches[0].clientX - startX;
+            currentPanY = e.touches[0].clientY - startY;
+            updateWorkspaceTransform();
+        }
+    }, { passive: false });
+
     window.addEventListener('mouseup', () => {
         isPanningWorkspace = false;
         previewPanel.style.cursor = 'grab';
+    });
+    
+    window.addEventListener('touchend', () => {
+        isPanningWorkspace = false;
     });
 
 
@@ -121,13 +143,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const imgElId = `img-${idNum}`;
             const label = document.getElementById(`label-${idNum}`);
             const imgEl = document.getElementById(imgElId);
+            const slot = imgEl.closest('.photo-slot');
             
-            imgEl.style.backgroundImage = `url(${imageUrl})`;
-            label.classList.add('has-image');
+            const tempImg = new Image();
+            tempImg.src = imageUrl;
+            tempImg.onload = () => {
+                const slotRatio = slot.clientWidth / slot.clientHeight;
+                const imgRatio = tempImg.width / tempImg.height;
+                
+                // Set dimension so that it covers the slot but allows panning the full original image
+                if (imgRatio > slotRatio) {
+                    imgEl.style.height = '100%';
+                    imgEl.style.width = 'auto';
+                } else {
+                    imgEl.style.width = '100%';
+                    imgEl.style.height = 'auto';
+                }
+                
+                imgEl.src = imageUrl;
+                imgEl.classList.add('loaded');
+                label.classList.add('has-image');
+                
+                // Need to re-apply transform when src changes
+                updateImageTransform(imgElId);
+            };
 
-            // Initialize state or reset it
             const isNew = !imgStates[imgElId];
-            imgStates[imgElId] = { scale: 1, panX: 0, panY: 0, isDragging: false, startX: 0, startY: 0 };
+            if (isNew) {
+                imgStates[imgElId] = { scale: 1, panX: 0, panY: 0, isDragging: false, startX: 0, startY: 0 };
+            }
             updateImageTransform(imgElId);
 
             // Add mouse events only once
@@ -154,6 +198,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Double click to replace image
                 imgEl.addEventListener('dblclick', () => {
                     document.getElementById(`file-${idNum}`).click();
+                });
+
+                // Touch Events for Mobile (Pan & Pinch-to-Zoom)
+                let initialPinchDistance = null;
+                let initialScale = 1;
+
+                imgEl.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1) {
+                        const state = imgStates[imgElId];
+                        state.isDragging = true;
+                        state.startX = e.touches[0].clientX - (state.panX * state.scale);
+                        state.startY = e.touches[0].clientY - (state.panY * state.scale);
+                    } else if (e.touches.length === 2) {
+                        const state = imgStates[imgElId];
+                        initialPinchDistance = Math.hypot(
+                            e.touches[0].clientX - e.touches[1].clientX,
+                            e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        initialScale = state.scale;
+                    }
+                }, { passive: false });
+
+                imgEl.addEventListener('touchmove', (e) => {
+                    e.preventDefault(); // Prevent page scrolling while editing photo
+                    const state = imgStates[imgElId];
+                    
+                    if (e.touches.length === 1 && state.isDragging) {
+                        state.panX = (e.touches[0].clientX - state.startX) / state.scale;
+                        state.panY = (e.touches[0].clientY - state.startY) / state.scale;
+                        updateImageTransform(imgElId);
+                    } else if (e.touches.length === 2 && initialPinchDistance) {
+                        const currentDistance = Math.hypot(
+                            e.touches[0].clientX - e.touches[1].clientX,
+                            e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        const pinchRatio = currentDistance / initialPinchDistance;
+                        state.scale = Math.max(0.1, initialScale * pinchRatio);
+                        updateImageTransform(imgElId);
+                    }
+                }, { passive: false });
+
+                imgEl.addEventListener('touchend', (e) => {
+                    const state = imgStates[imgElId];
+                    if (e.touches.length === 0) {
+                        state.isDragging = false;
+                        initialPinchDistance = null;
+                    } else if (e.touches.length === 1) {
+                        // Reset drag start if one finger is lifted after pinching
+                        initialPinchDistance = null;
+                        state.isDragging = true;
+                        state.startX = e.touches[0].clientX - (state.panX * state.scale);
+                        state.startY = e.touches[0].clientY - (state.panY * state.scale);
+                    }
                 });
             }
         }
